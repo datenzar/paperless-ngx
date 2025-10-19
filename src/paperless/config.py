@@ -100,6 +100,59 @@ class OcrConfig(OutputTypeConfig):
 
 
 @dataclasses.dataclass
+class RestOcrConfig(OutputTypeConfig):
+    """
+    Specific settings for REST API-based OCR parser
+    """
+
+    api_endpoint: str = dataclasses.field(init=False)
+    api_key: str | None = dataclasses.field(init=False)
+    auth_token: str | None = dataclasses.field(init=False)
+    auth_method: str = dataclasses.field(init=False)
+    timeout: int = dataclasses.field(init=False)
+    retry_count: int = dataclasses.field(init=False)
+    verify_ssl: bool = dataclasses.field(init=False)
+    language: str = dataclasses.field(init=False)
+    custom_headers: dict[str, str] | None = dataclasses.field(init=False)
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+        app_config = self._get_config_instance()
+
+        self.api_endpoint = (
+            app_config.rest_ocr_endpoint or settings.REST_OCR_ENDPOINT or ""
+        )
+        self.api_key = app_config.rest_ocr_api_key or settings.REST_OCR_API_KEY
+        self.auth_token = app_config.rest_ocr_auth_token or settings.REST_OCR_AUTH_TOKEN
+        self.auth_method = (
+            app_config.rest_ocr_auth_method or settings.REST_OCR_AUTH_METHOD or "bearer"
+        )
+        self.timeout = app_config.rest_ocr_timeout or settings.REST_OCR_TIMEOUT or 30
+        self.retry_count = (
+            app_config.rest_ocr_retry_count or settings.REST_OCR_RETRY_COUNT or 3
+        )
+        self.verify_ssl = (
+            app_config.rest_ocr_verify_ssl
+            if app_config.rest_ocr_verify_ssl is not None
+            else settings.REST_OCR_VERIFY_SSL
+        )
+        self.language = (
+            app_config.rest_ocr_language or settings.REST_OCR_LANGUAGE or "eng"
+        )
+
+        custom_headers = None
+        if app_config.rest_ocr_custom_headers:
+            custom_headers = app_config.rest_ocr_custom_headers
+        elif settings.REST_OCR_CUSTOM_HEADERS is not None:
+            try:
+                custom_headers = json.loads(settings.REST_OCR_CUSTOM_HEADERS)
+            except json.JSONDecodeError:
+                custom_headers = {}
+        self.custom_headers = custom_headers
+
+
+@dataclasses.dataclass
 class BarcodeConfig(BaseConfig):
     """
     Barcodes settings

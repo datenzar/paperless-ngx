@@ -265,6 +265,77 @@ class ApplicationConfiguration(AbstractSingletonModel):
         null=True,
     )
 
+    """
+    Settings for the REST OCR parser
+    """
+
+    # PAPERLESS_REST_OCR_ENDPOINT
+    rest_ocr_endpoint = models.CharField(
+        verbose_name=_("REST OCR API endpoint URL"),
+        null=True,
+        blank=True,
+        max_length=255,
+    )
+
+    # PAPERLESS_REST_OCR_API_KEY
+    rest_ocr_api_key = models.CharField(
+        verbose_name=_("REST OCR API key"),
+        null=True,
+        blank=True,
+        max_length=255,
+    )
+
+    # PAPERLESS_REST_OCR_AUTH_TOKEN
+    rest_ocr_auth_token = models.CharField(
+        verbose_name=_("REST OCR authentication token"),
+        null=True,
+        blank=True,
+        max_length=512,
+    )
+
+    # PAPERLESS_REST_OCR_AUTH_METHOD
+    rest_ocr_auth_method = models.CharField(
+        verbose_name=_("REST OCR authentication method"),
+        null=True,
+        blank=True,
+        max_length=16,
+        help_text=_("bearer, api_key, or basic"),
+    )
+
+    # PAPERLESS_REST_OCR_TIMEOUT
+    rest_ocr_timeout = models.PositiveIntegerField(
+        verbose_name=_("REST OCR request timeout in seconds"),
+        null=True,
+        validators=[MinValueValidator(1)],
+    )
+
+    # PAPERLESS_REST_OCR_RETRY_COUNT
+    rest_ocr_retry_count = models.PositiveIntegerField(
+        verbose_name=_("REST OCR retry count"),
+        null=True,
+        validators=[MinValueValidator(0)],
+    )
+
+    # PAPERLESS_REST_OCR_VERIFY_SSL
+    rest_ocr_verify_ssl = models.BooleanField(
+        verbose_name=_("Verify SSL certificate for REST OCR endpoint"),
+        null=True,
+    )
+
+    # PAPERLESS_REST_OCR_LANGUAGE
+    rest_ocr_language = models.CharField(
+        verbose_name=_("Language hint for REST OCR"),
+        null=True,
+        blank=True,
+        max_length=32,
+    )
+
+    # PAPERLESS_REST_OCR_CUSTOM_HEADERS
+    rest_ocr_custom_headers = models.JSONField(
+        verbose_name=_("Custom HTTP headers for REST OCR requests"),
+        null=True,
+    )
+
     class Meta:
         verbose_name = _("paperless application settings")
 

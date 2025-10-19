@@ -320,6 +320,7 @@ INSTALLED_APPS = [
     "paperless",
     "documents.apps.DocumentsConfig",
     "paperless_tesseract.apps.PaperlessTesseractConfig",
+    "paperless_rest_ocr.apps.PaperlessRestOcrConfig",
     "paperless_text.apps.PaperlessTextConfig",
     "paperless_mail.apps.PaperlessMailConfig",
     "django.contrib.admin",
@@ -1152,6 +1153,23 @@ OCR_COLOR_CONVERSION_STRATEGY = os.getenv(
 )
 
 OCR_USER_ARGS = os.getenv("PAPERLESS_OCR_USER_ARGS")
+
+# OCR Backend selection: 'tesseract' (default) or 'rest_api'
+OCR_BACKEND = os.getenv("PAPERLESS_OCR_BACKEND", "tesseract")
+
+# REST OCR API configuration
+REST_OCR_ENDPOINT = os.getenv("PAPERLESS_REST_OCR_ENDPOINT", "")
+REST_OCR_API_KEY = os.getenv("PAPERLESS_REST_OCR_API_KEY")
+REST_OCR_AUTH_TOKEN = os.getenv("PAPERLESS_REST_OCR_AUTH_TOKEN")
+REST_OCR_AUTH_METHOD = os.getenv("PAPERLESS_REST_OCR_AUTH_METHOD", "bearer")
+REST_OCR_TIMEOUT: Final[int] = __get_int("PAPERLESS_REST_OCR_TIMEOUT", 30)
+REST_OCR_RETRY_COUNT: Final[int] = __get_int("PAPERLESS_REST_OCR_RETRY_COUNT", 3)
+REST_OCR_VERIFY_SSL: Final[bool] = __get_boolean(
+    "PAPERLESS_REST_OCR_VERIFY_SSL",
+    "true",
+)
+REST_OCR_LANGUAGE = os.getenv("PAPERLESS_REST_OCR_LANGUAGE", "eng")
+REST_OCR_CUSTOM_HEADERS = os.getenv("PAPERLESS_REST_OCR_CUSTOM_HEADERS")
 
 MAX_IMAGE_PIXELS: Final[int | None] = __get_optional_int(
     "PAPERLESS_MAX_IMAGE_PIXELS",
