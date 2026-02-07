@@ -41,17 +41,17 @@ run = "./scripts/start_services.sh"
 [tasks."dev:backend:web"]
 description = "Start Django dev server"
 dir = "src"
-run = "python3 manage.py runserver"
+run = "uv run manage.py runserver"
 
 [tasks."dev:backend:consumer"]
 description = "Start document consumer"
 dir = "src"
-run = "python3 manage.py document_consumer"
+run = "uv run manage.py document_consumer"
 
 [tasks."dev:backend:worker"]
 description = "Start Celery worker"
 dir = "src"
-run = "celery --app paperless worker -l DEBUG"
+run = "uv run celery --app paperless worker -l DEBUG --pool=solo"
 
 [tasks."dev:frontend"]
 description = "Start Angular development server"
