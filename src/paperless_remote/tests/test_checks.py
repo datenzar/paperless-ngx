@@ -22,3 +22,25 @@ class TestChecks(TestCase):
                 "Azure AI remote parser requires endpoint and API key to be configured.",
             ),
         )
+
+    @override_settings(REMOTE_OCR_ENGINE="ocrbridge-ocrmac")
+    @override_settings(REMOTE_OCR_API_KEY="somekey")
+    @override_settings(REMOTE_OCR_ENDPOINT=None)
+    def test_ocrbridge_ocrmac_no_endpoint(self) -> None:
+        msgs = check_remote_parser_configured(None)
+        self.assertEqual(len(msgs), 1)
+        self.assertTrue(
+            msgs[0].msg.startswith(
+                "OCRBridge OCRMac remote parser requires endpoint and API key to be configured.",
+            ),
+        )
+
+    @override_settings(REMOTE_OCR_ENGINE="ocrbridge-unknown")
+    def test_unknown_engine(self) -> None:
+        msgs = check_remote_parser_configured(None)
+        self.assertEqual(len(msgs), 1)
+        self.assertTrue(
+            msgs[0].msg.startswith(
+                "Remote parser engine must be one of: azureai, ocrbridge-ocrmac.",
+            ),
+        )

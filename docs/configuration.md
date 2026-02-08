@@ -1847,7 +1847,12 @@ password. All of these options come from their similarly-named [Django settings]
 
 #### [`PAPERLESS_REMOTE_OCR_ENGINE=<str>`](#PAPERLESS_REMOTE_OCR_ENGINE) {#PAPERLESS_REMOTE_OCR_ENGINE}
 
-: The remote OCR engine to use. Currently only Azure AI is supported as "azureai".
+: The remote OCR engine to use.
+
+    Supported values:
+
+    - `azureai`
+    - `ocrbridge-ocrmac`
 
     Defaults to None, which disables remote OCR.
 
@@ -1859,7 +1864,7 @@ password. All of these options come from their similarly-named [Django settings]
 
 #### [`PAPERLESS_REMOTE_OCR_ENDPOINT=<str>`](#PAPERLESS_REMOTE_OCR_ENDPOINT) {#PAPERLESS_REMOTE_OCR_ENDPOINT}
 
-: The endpoint to use for the remote OCR engine. This is required for Azure AI.
+: The endpoint to use for the remote OCR engine. This is required for both Azure AI and OCRBridge OCRMac.
 
     Defaults to None.
 
