@@ -1,7 +1,11 @@
 from pathlib import Path
+from typing import cast
 
+import httpx
 from django.conf import settings
 
+from documents.parsers import ParseError
+from paperless.config import OcrConfig
 from paperless_tesseract.parsers import RasterisedDocumentParser
 
 
@@ -17,28 +21,35 @@ class RemoteEngineConfig:
         self.endpoint = endpoint
 
     def engine_is_valid(self):
-        valid = self.engine in ["azureai"] and self.api_key is not None
-        if self.engine == "azureai":
-            valid = valid and self.endpoint is not None
-        return valid
+        return (
+            self.engine in ["azureai", "ocrbridge-ocrmac"]
+            and bool(self.api_key)
+            and bool(self.endpoint)
+        )
 
 
 class RemoteDocumentParser(RasterisedDocumentParser):
     """
-    This parser uses a remote OCR engine to parse documents. Currently, it supports Azure AI Vision
-    as this is the only service that provides a remote OCR API with text-embedded PDF output.
+    This parser uses remote OCR engines to parse documents.
+
+    Supported engines:
+    - azureai
+    - ocrbridge-ocrmac
     """
 
     logging_name = "paperless.parsing.remote"
 
-    def get_settings(self) -> RemoteEngineConfig:
+    def get_settings(self) -> OcrConfig:
         """
         Returns the configuration for the remote OCR engine, loaded from Django settings.
         """
-        return RemoteEngineConfig(
-            engine=settings.REMOTE_OCR_ENGINE,
-            api_key=settings.REMOTE_OCR_API_KEY,
-            endpoint=settings.REMOTE_OCR_ENDPOINT,
+        return cast(
+            "OcrConfig",
+            RemoteEngineConfig(
+                engine=settings.REMOTE_OCR_ENGINE,
+                api_key=settings.REMOTE_OCR_API_KEY,
+                endpoint=settings.REMOTE_OCR_ENDPOINT,
+            ),
         )
 
     def supported_mime_types(self):
@@ -108,6 +119,76 @@ class RemoteDocumentParser(RasterisedDocumentParser):
 
         return None
 
+    def ocrbridge_ocrmac_parse(
+        self,
+        file: Path,
+        mime_type: str,
+    ) -> str:
+        endpoint = self.settings.endpoint.rstrip("/") + "/v2/ocr/ocrmac/process"
+
+        try:
+            with (
+                file.open("rb") as f,
+                httpx.Client(
+                    timeout=settings.CELERY_TASK_TIME_LIMIT,
+                ) as client,
+            ):
+                response = client.post(
+                    endpoint,
+                    headers={"X-API-Key": self.settings.api_key},
+                    files={"file": (file.name, f, mime_type)},
+                    data={"output_format": "pdf"},
+                )
+                try:
+                    response.raise_for_status()
+                except httpx.HTTPStatusError as e:
+                    detail = None
+                    error_code = None
+                    try:
+                        payload = e.response.json()
+                        if isinstance(payload, dict):
+                            detail = payload.get("detail")
+                            error_code = payload.get("error_code")
+                    except ValueError:
+                        pass
+
+                    message = f"OCRBridge OCRMac parsing failed: HTTP {e.response.status_code}"
+                    if detail:
+                        message += f" - {detail}"
+                    if error_code:
+                        message += f" (error_code: {error_code})"
+
+                    self.log.error(message)
+                    raise ParseError(message) from e
+
+            content_type = response.headers.get("content-type", "").lower()
+            if "application/pdf" not in content_type:
+                message = (
+                    "OCRBridge OCRMac parsing failed: expected PDF response, got "
+                    f"{content_type or 'unknown content type'}"
+                )
+                self.log.error(message)
+                raise ParseError(message)
+
+            self.archive_path = self.tempdir / "archive.pdf"
+            self.archive_path.write_bytes(response.content)
+
+            sidecar_file = self.tempdir / "sidecar.txt"
+            text = self.extract_text(sidecar_file, self.archive_path)
+            if text is None:
+                message = "OCRBridge OCRMac parsing failed: unable to extract text from PDF response"
+                self.log.error(message)
+                raise ParseError(message)
+
+            return text
+        except Exception as e:
+            if isinstance(e, ParseError):
+                raise
+
+            message = f"OCRBridge OCRMac parsing failed: {e}"
+            self.log.error(message)
+            raise ParseError(message) from e
+
     def parse(self, document_path: Path, mime_type, file_name=None):
         if not self.settings.engine_is_valid():
             self.log.warning(
@@ -116,3 +197,5 @@ class RemoteDocumentParser(RasterisedDocumentParser):
             self.text = ""
         elif self.settings.engine == "azureai":
             self.text = self.azure_ai_vision_parse(document_path)
+        elif self.settings.engine == "ocrbridge-ocrmac":
+            self.text = self.ocrbridge_ocrmac_parse(document_path, mime_type)
